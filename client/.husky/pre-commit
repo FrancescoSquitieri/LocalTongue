@@ -1,0 +1,56 @@
+#!/usr/bin/env sh
+
+# ─────────────────────────────────────────────────────────────
+# LinguaLocal — pre-commit hook (frontend only)
+# Runs automatically on every `git commit`.
+# Exits with code 1 = commit is blocked.
+# Exits with code 0 = commit proceeds.
+# ─────────────────────────────────────────────────────────────
+
+set -e
+
+echo ""
+echo "🔍 Running pre-commit checks..."
+echo ""
+
+# Move to the client folder where biome and tsc are installed.
+# Works regardless of where you run git commit from.
+cd "$(git rev-parse --show-toplevel)/client"
+
+# ── 1. BIOME: format + lint + import sort ────────────────────
+#
+# --staged    → only checks files currently staged for commit (fast).
+# --write     → auto-fixes everything that can be fixed safely.
+# --diagnostic-level=error → warnings are shown but do NOT block the commit.
+#               Only errors cause a non-zero exit code and block the commit.
+#
+echo "⚡ Biome: format, lint, import sort (staged files)..."
+
+npx @biomejs/biome check \
+  --staged \
+  --write \
+  --diagnostic-level=error
+
+echo "✅ Biome passed."
+echo ""
+
+# Re-stage any files that Biome just auto-fixed,
+# so the committed version includes the fixes, not the original.
+git diff --name-only | xargs -r git add
+
+# ── 2. TYPESCRIPT: type check ────────────────────────────────
+#
+# --noEmit → type-check only, no compiled output.
+# Any type error = non-zero exit = commit blocked.
+# Warnings from biome do NOT affect this step.
+#
+echo "🔷 TypeScript: checking types..."
+
+npx tsc --noEmit
+
+echo "✅ TypeScript passed."
+echo ""
+
+# ─────────────────────────────────────────────────────────────
+echo "🎉 All checks passed. Proceeding with commit."
+echo ""

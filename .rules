@@ -1,0 +1,151 @@
+# LinguaLocal — Zed Agent Rules
+
+## Project Overview
+LinguaLocal is an open-source local language learning tool.
+The user speaks to an LLM (via LM Studio) and practices conversation in foreign languages.
+Stack: React + Vite (frontend, /client) — Go (backend, /server).
+No monorepo. Started independently, orchestrated via Makefile.
+
+---
+
+## React Rules
+
+### Websocket
+- WebSocket connection must be managed as a singleton service in `src/services/websocket/`.
+- Never instantiate WebSocket inside a component or hook.
+- Reactive WebSocket state (status, messages) must live in a dedicated Zustand store in `src/stores/websocket/`.
+- Components must access WebSocket state only via `useWebSocket` hook, never via the service directly.
+- The WebSocket connection must be initialized once in `App.tsx` and never re-initialized on component mount.
+
+### HTTP & Data Fetching
+- Always use **TanStack Query** (`@tanstack/react-query`) for all HTTP requests and server state management.
+- Always use **Axios** as the HTTP client inside query/mutation functions. Never use `fetch` directly.
+- Never call an API inside a component directly. Always create a **custom hook** first that encapsulates the TanStack Query logic, then consume that hook inside the component.
+- Before creating a new custom hook, always check if an existing hook already returns the needed data. Reuse it if so.
+- Custom hooks must follow the naming convention: `use` + action + resource, in camelCase.
+  - Examples: `useGetConversations`, `useCreateSession`, `useDeleteMessage`
+  - Never use vague names like `useData`, `useFetch`, or `useQuery`.
+- All API hooks must live in `src/api/`. Never create hooks that call APIs anywhere else.
+- Inside `src/api/`, each domain has its own folder named in kebab-case after the resource.
+  - Examples: `src/api/user/`, `src/api/conversation/`, `src/api/language-session/`
+- Each hook lives in its own file inside the domain folder, named in kebab-case after the operation.
+  - Examples: `src/api/user/use-get-user.ts`, `src/api/user/use-create-user.ts`
+- Before creating a new hook, always scan the entire `src/api/` directory to check if a hook for that operation already exists. Reuse it if so.
+- Never create a hook outside of `src/api/` even if it's only used in one component.
+
+### Error Handling — Toast Notifications
+- Always handle errors with toast notifications using **Sonner**, imported from `@/components/ui/sonner`.
+  - Never import Sonner directly from the `sonner` package — always use the local shadcn component.
+- Every TanStack Query mutation and query must have an `onError` callback that fires a `toast.error()`.
+- Never show raw error messages from the server directly to the user. Always show a human-readable message.
+  - Example: `toast.error("Could not load conversations. Please try again.")`
+- WebSocket errors (connection failures, reconnection attempts, malformed messages) must also trigger a `toast.error()` or `toast.warning()` depending on severity.
+  - Connection lost → `toast.warning("Connection lost. Reconnecting...")`
+  - Unrecoverable error → `toast.error("Connection error. Please refresh the page.")`
+- Never use `alert()`, `console.error()` as a user-facing error strategy. Console output is for development only.
+- Success feedback on mutations is optional but encouraged via `toast.success()` for actions where the user needs confirmation (e.g. saved, deleted, sent).
+
+### UI State Management
+- Always use **Zustand** for UI state (modals, toggles, selected items, ephemeral state).
+- Never use `useState` for state that is shared across components — lift it to a Zustand store instead.
+- Keep stores small and domain-specific. One store per feature/domain (e.g. `useSessionStore`, `useLanguageStore`).
+
+### Validation
+- Always use **Zod** for all data validation: form inputs, API responses, environment variables.
+- Define Zod schemas in a `types.ts` file within the relevant feature folder.
+- Derive TypeScript types from Zod schemas using `z.infer<typeof Schema>` — never duplicate type definitions manually.
+
+### Component Rules
+- **Maximum 250 lines per component file.** If a file is approaching this limit, extract sub-components immediately.
+- Sub-components used only in one place go in the same folder as the parent.
+- Sub-components shared across features go in `src/components/`.
+- Never write nested conditional logic inside JSX. Instead, extract the conditional branch into a separate component and use optional rendering.
+  - Bad: `{condition && <div>{anotherCondition ? <A /> : <B />}</div>}`
+  - Good: `{condition && <ConversationPanel />}` where `ConversationPanel` handles its own rendering logic.
+- All component props must be typed with a `interface` named `ComponentNameProps`.
+  - Example: `interface TopicSelectorProps { ... }`
+  - Never use a generic `Props` name or inline prop types in the function signature.
+
+### File & Folder Structure
+- Every new component or feature must live in its own **folder**, named in **PascalCase**.
+- The folder must contain an `Index.tsx` as the main entry point.
+- Additional files created only if actually needed:
+  - `Types.ts` — Zod schemas and inferred TypeScript types
+  - `Helpers.ts` — pure utility functions local to this feature
+  - `Constants.ts` — constants local to this feature
+- If a helper, constant, or type is shared across features, place it in the relevant global file:
+  - `src/lib/helpers.ts`, `src/lib/constants.ts`, `src/types/index.ts`
+- Never create flat component files at the root of `src/components/`. Always use a folder.
+
+### Styling
+- Always use **shadcn/ui** for UI components. Prefer existing shadcn components before building custom ones.
+- If a needed UI element is not available in shadcn, create it in `src/components/ui/`, following the same shadcn component conventions.
+- Always use **Tailwind CSS** for styling. Never write custom CSS unless absolutely unavoidable.
+- Always use the `cn()` utility (from `shadcn/ui` or `clsx` + `tailwind-merge`) for conditional or composed class names. Never use template literals for conditional Tailwind classes.
+  - Bad: `` className={`text-sm ${isActive ? 'text-blue-500' : 'text-gray-400'}`} ``
+  - Good: `className={cn("text-sm", isActive ? "text-blue-500" : "text-gray-400")}`
+- For icons, always use **Lucide React** (`lucide-react`). Never use other icon libraries unless explicitly requested.
+- Import icons as named exports: `import { Search, Settings } from "lucide-react"`.
+- Never import the entire library. Always use named imports to keep the bundle small.
+- Icon size and color must always be controlled via Tailwind classes (`className`), never via inline styles.
+  - Example: `<Search className="w-4 h-4 text-muted-foreground" />`
+
+### TypeScript
+- **Never use `any`.** If the type is unknown, use `unknown` and narrow it explicitly.
+- All props, function parameters, and return types must be explicitly typed.
+- Use `interface` for object shapes and component props. Use `type` for unions, intersections, and aliases.
+
+### Naming Conventions
+- **Files and folders**: always PascalCase (e.g. `TopicSelector/Index.tsx`, `VoiceControl/Types.ts`).
+- **Variables, functions, hooks**: always explicit and descriptive camelCase. Never use single-letter or abbreviated names.
+  - Bad: `i`, `x`, `val`, `tmp`, `cb`, `fn`, `res`
+  - Good: `indexOfElementInArray`, `selectedLanguageCode`, `onSessionCreated`
+- **Constants**: SCREAMING_SNAKE_CASE (e.g. `MAX_CONVERSATION_LENGTH`, `DEFAULT_LANGUAGE`).
+- **Interfaces**: PascalCase, suffixed with the role (e.g. `TopicSelectorProps`, `ConversationSession`).
+
+### Import Order
+Always organize imports in this order, with a blank line between each group:
+1. React and React-related (`react`, `react-dom`, `react-router-dom`)
+2. External libraries (`@tanstack/react-query`, `axios`, `zustand`, `zod`, etc.)
+3. Internal absolute imports (`@/components/...`, `@/hooks/...`, `@/lib/...`)
+4. Relative imports (`./Components`, `../Helpers`)
+5. Types (`import type { ... }`)
+6. Styles (if any)
+
+### Code Quality
+- **No `console.log`** left in committed code. Use a dedicated logger utility if debugging output is needed.
+- No commented-out code blocks. If code is not needed, delete it.
+- No magic numbers or inline string literals — extract them to `Constants.ts`.
+
+### Packages
+- Only install packages explicitly listed in these rules or requested by the user.
+- Never add a dependency without being asked. Never suggest replacing an existing listed package with an alternative.
+- Required packages: `@tanstack/react-query`, `axios`, `zustand`, `zod`, `shadcn/ui`, `tailwindcss`, `clsx`, `tailwind-merge`.
+
+---
+
+## Go Rules
+
+### General
+- Write idiomatic Go. Prefer simplicity and clarity over abstraction.
+- No unnecessary interfaces — only define an interface when there are multiple implementations or testing requires it.
+- No global state. Pass all dependencies explicitly via function parameters or struct fields.
+
+### Structure
+- Keep HTTP handlers thin. Move all business logic into separate packages.
+- Group files by domain, not by layer (e.g. `/session`, `/conversation`, not `/handlers`, `/models`).
+
+### Naming
+- Same philosophy as React: always explicit and descriptive names. No single-letter variables except in short `for` loops where the scope is obvious.
+- Exported functions and types: PascalCase. Unexported: camelCase.
+
+### Error Handling
+- Never ignore errors. Always handle or explicitly propagate them.
+- Wrap errors with context using `fmt.Errorf("context: %w", err)`.
+
+---
+
+## General Rules (Both Frontend and Backend)
+- Comment only non-obvious logic. Never comment what the code already says.
+- Keep functions small and single-responsibility. If a function does more than one thing, split it.
+- Consistency over cleverness. Prefer readable code over "smart" code.
