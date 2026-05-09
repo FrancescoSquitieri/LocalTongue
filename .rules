@@ -133,7 +133,18 @@ Always organize imports in this order, with a blank line between each group:
 
 ### Structure
 - Keep HTTP handlers thin. Move all business logic into separate packages.
-- Group files by domain, not by layer (e.g. `/session`, `/conversation`, not `/handlers`, `/models`).
+- Group files by domain, not by layer (e.g. `/conversation`, `/user`, not `/handlers`, `/models`).
+
+### Architecture Patterns
+- Always follow the **Repository Pattern** for data access.
+  - Define a repository interface in the domain package (e.g. `conversation.Repository`).
+  - Implement the interface in a separate file (e.g. `Repository.go` inside the domain folder).
+  - Handlers and services must never access the data layer directly — always go through the repository interface.
+- Always follow **Composition** over inheritance for sharing behavior across domains.
+  - Build structs by embedding smaller, focused structs rather than creating deep dependency chains.
+  - Shared behavior (e.g. logging, error wrapping) must be composed into structs explicitly, never assumed as global.
+- The recommended folder structure per domain is: server/ containing a conversation/ folder with Handler.go (HTTP handler, thin, delegates to service), Service.go (business logic), Repository.go (repository implementation), Interfaces.go (Repository and Service interfaces), and Types.go (domain types and structs).
+- Never put business logic in handlers. Never put data access logic in services.
 
 ### Naming
 - Same philosophy as React: always explicit and descriptive names. No single-letter variables except in short `for` loops where the scope is obvious.
