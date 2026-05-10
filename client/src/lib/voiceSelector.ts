@@ -167,6 +167,42 @@ export function findVoiceByURI(uri: string): SpeechSynthesisVoice | null {
 }
 
 /**
+ * Builds a lowercase search string for a voice combining:
+ *   - the voice name
+ *   - the English name of the language (e.g. "Italian" for "it")
+ *   - the English name of the region  (e.g. "Italy" for "IT")
+ *
+ * Used to match queries like "english", "italian", "united states", etc.
+ */
+export function getVoiceSearchText(voice: SpeechSynthesisVoice): string {
+	const parts: string[] = [voice.name.toLowerCase()];
+
+	const segments = voice.lang.split("-");
+	const languageCode = segments[0];
+	const regionCode = segments.length >= 2 ? segments[segments.length - 1] : "";
+
+	try {
+		const languageNames = new Intl.DisplayNames(["en"], { type: "language" });
+		const languageName = languageNames.of(languageCode);
+		if (languageName) parts.push(languageName.toLowerCase());
+	} catch {
+		// Intl.DisplayNames not supported or unknown code — skip.
+	}
+
+	if (regionCode.length === 2) {
+		try {
+			const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
+			const regionName = regionNames.of(regionCode.toUpperCase());
+			if (regionName) parts.push(regionName.toLowerCase());
+		} catch {
+			// Unknown region code — skip.
+		}
+	}
+
+	return parts.join(" ");
+}
+
+/**
  * Returns the highest-scoring voice whose language starts with `langCode`.
  * Returns null if no voice is found — the browser will use its default.
  */

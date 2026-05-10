@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import {
 	Select,
@@ -8,7 +9,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import type { VoiceInfo } from "@/lib/voiceSelector";
-import { getAllVoicesWithInfo } from "@/lib/voiceSelector";
+import { getAllVoicesWithInfo, getVoiceSearchText } from "@/lib/voiceSelector";
 import { useVoiceStore } from "@/stores/voice";
 
 const AUTO_VALUE = "__auto__";
@@ -47,6 +48,8 @@ export default function VoiceSelector() {
 	);
 
 	const [voices, setVoices] = useState<VoiceInfo[]>([]);
+	const [searchQuery, setSearchQuery] = useState("");
+	const searchInputRef = useRef<HTMLInputElement>(null);
 
 	// Voices load asynchronously — refresh when the browser fires voiceschanged.
 	useEffect(() => {
@@ -62,30 +65,77 @@ export default function VoiceSelector() {
 		};
 	}, []);
 
+	const normalizedQuery = searchQuery.trim().toLowerCase();
+
+	const filteredVoices =
+		normalizedQuery === ""
+			? voices
+			: voices.filter(({ voice }) =>
+					getVoiceSearchText(voice).includes(normalizedQuery),
+				);
+
 	const selectedValue = preferredVoiceURI ?? AUTO_VALUE;
 
 	function handleValueChange(value: string) {
 		setPreferredVoiceURI(value === AUTO_VALUE ? null : value);
 	}
 
+	function handleOpenChange(open: boolean) {
+		if (!open) {
+			setSearchQuery("");
+			return;
+		}
+		// Radix focuses the selected item first — defer to let it finish,
+		// then move focus to the search input.
+		setTimeout(() => {
+			searchInputRef.current?.focus();
+		}, 50);
+	}
+
+	const searchBox = (
+		<div className="flex items-center gap-2 px-2.5 py-2">
+			<Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+			<input
+				ref={searchInputRef}
+				type="text"
+				value={searchQuery}
+				onChange={(event) => setSearchQuery(event.target.value)}
+				// Prevent Radix from intercepting keystrokes for its own type-ahead.
+				onKeyDown={(event) => event.stopPropagation()}
+				placeholder="Search by name or language…"
+				className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+			/>
+		</div>
+	);
+
 	return (
 		<div className="flex flex-col items-center gap-1.5">
 			<span className="text-xs font-medium text-muted-foreground">
 				Response voice
 			</span>
-			<Select value={selectedValue} onValueChange={handleValueChange}>
+			<Select
+				value={selectedValue}
+				onValueChange={handleValueChange}
+				onOpenChange={handleOpenChange}
+			>
 				<SelectTrigger className="w-72 text-sm">
 					<SelectValue placeholder="Auto (detect language)" />
 				</SelectTrigger>
-				<SelectContent position="popper" style={{ maxHeight: "16rem" }}>
-					<SelectItem value={AUTO_VALUE}>
-						<span className="flex items-center gap-2">
-							<span>🌐</span>
-							<span>Auto — detect language</span>
-						</span>
-					</SelectItem>
+				<SelectContent
+					position="popper"
+					style={{ maxHeight: "16rem" }}
+					header={searchBox}
+				>
+					{normalizedQuery === "" && (
+						<SelectItem value={AUTO_VALUE}>
+							<span className="flex items-center gap-2">
+								<span>🌐</span>
+								<span>Auto — detect language</span>
+							</span>
+						</SelectItem>
+					)}
 
-					{voices.map(({ voice, qualityLabel, flag }) => (
+					{filteredVoices.map(({ voice, qualityLabel, flag }) => (
 						<SelectItem key={voice.voiceURI} value={voice.voiceURI}>
 							<span className="flex items-center gap-2">
 								<span>{flag}</span>
@@ -94,6 +144,12 @@ export default function VoiceSelector() {
 							</span>
 						</SelectItem>
 					))}
+
+					{filteredVoices.length === 0 && (
+						<div className="py-4 text-center text-xs text-muted-foreground">
+							No voices found.
+						</div>
+					)}
 				</SelectContent>
 			</Select>
 		</div>
