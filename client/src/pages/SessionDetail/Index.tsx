@@ -70,7 +70,7 @@ export default function SessionDetail() {
 		: "";
 
 	return (
-		<main className="mx-auto min-h-screen max-w-2xl px-6 py-8">
+		<main className="mx-auto min-h-screen max-w-3xl px-6 py-8">
 			<div className="mb-6 flex items-center gap-3">
 				<Link to="/sessions">
 					<Button
@@ -97,7 +97,7 @@ export default function SessionDetail() {
 						</p>
 					</div>
 
-					<div className="mb-6 max-h-[50vh] overflow-y-auto space-y-2 rounded-lg border border-border p-3">
+					<div className="mb-6 max-h-[60vh] overflow-y-auto space-y-5 rounded-lg border border-border p-3">
 						{data.messages.length === 0 ? (
 							<p className="py-4 text-center text-sm text-muted-foreground">
 								No messages yet.
