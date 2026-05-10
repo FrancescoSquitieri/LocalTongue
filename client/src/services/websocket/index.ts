@@ -1,5 +1,7 @@
 import { toast } from "sonner";
+
 import type { WebSocketMessage } from "@/services/websocket/Types";
+import { useSessionStore } from "@/stores/session";
 import { useWebSocketStore } from "@/stores/websocket";
 
 const WEBSOCKET_URL = "ws://localhost:3001/ws";
@@ -10,10 +12,8 @@ class WebSocketService {
 
 	connect(): void {
 		const readyState = this.socket?.readyState;
-		if (readyState === WebSocket.OPEN || readyState === WebSocket.CONNECTING) {
+		if (readyState === WebSocket.OPEN || readyState === WebSocket.CONNECTING)
 			return;
-		}
-
 		useWebSocketStore.getState().setStatus("connecting");
 		this.socket = new WebSocket(WEBSOCKET_URL);
 		this.socket.onopen = this.handleOpen;
@@ -32,6 +32,10 @@ class WebSocketService {
 		this.socket.send(JSON.stringify(message));
 	}
 
+	initSession(sessionId: string): void {
+		this.send({ type: "init_session", payload: { sessionId } });
+	}
+
 	private handleOpen = (): void => {
 		this.wasConnected = true;
 		useWebSocketStore.getState().setStatus("connected");
@@ -39,9 +43,7 @@ class WebSocketService {
 	};
 
 	private handleClose = (): void => {
-		if (this.wasConnected) {
-			toast.warning("Connection lost. Reconnecting...");
-		}
+		if (this.wasConnected) toast.warning("Connection lost. Reconnecting...");
 		this.wasConnected = false;
 		useWebSocketStore.getState().setStatus("disconnected");
 	};
@@ -55,6 +57,10 @@ class WebSocketService {
 		try {
 			const message = JSON.parse(event.data as string) as WebSocketMessage;
 			useWebSocketStore.getState().addMessage(message);
+
+			if (message.type === "session_ready") {
+				useSessionStore.getState().setSessionReady(true);
+			}
 		} catch {
 			toast.error("Connection error. Please refresh the page.");
 		}

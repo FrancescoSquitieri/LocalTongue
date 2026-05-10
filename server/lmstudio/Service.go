@@ -15,29 +15,36 @@ const (
 	lmStudioEndpoint   = "http://127.0.0.1:1234/v1/chat/completions"
 	modelName          = "local-model"
 	defaultTemperature = 0.7
+	rawTemperature     = 0.3
 	requestTimeout     = 60 * time.Second
-	systemPrompt       = `You are a conversational language-learning tutor.
-
-Core rules — follow them in every reply:
-1. Always respond in the same language the user speaks to you.
-2. Keep replies SHORT: 1–3 sentences for everyday conversation. Never add unsolicited lists, bullet points, or long explanations.
-3. Be exhaustive ONLY when the user explicitly asks for an explanation, a rule, or a correction. Even then, be as concise as possible.
-4. Never repeat or paraphrase what the user just said unless it contains a mistake you are correcting.
-5. When correcting a mistake, give the corrected form in one sentence, then continue the conversation naturally.
-6. Do not add meta-commentary such as "Great question!" or "Of course!". Go straight to the point.`
 )
 
 var httpClient = &http.Client{Timeout: requestTimeout}
 
 // Complete sends the conversation history plus the new user message to LM Studio
-// and returns the assistant's reply.
-func Complete(history []ChatMessage, userMessage string) (string, error) {
-	messages := buildMessages(history, userMessage)
+// using a dynamic system prompt built from the session config.
+func Complete(config SessionConfig, history []ChatMessage, userMessage string) (string, error) {
+	systemPrompt := BuildSystemPrompt(config)
+	messages := buildMessages(systemPrompt, history, userMessage)
+	return sendRequest(messages, defaultTemperature)
+}
 
+// CompleteRaw sends a single user message with no history and a custom system prompt.
+// Uses lower temperature for deterministic output. Used for quiz generation.
+func CompleteRaw(systemPromptText, userMessage string) (string, error) {
+	messages := []ChatMessage{
+		{Role: "system", Content: systemPromptText},
+		{Role: "user", Content: userMessage},
+	}
+	return sendRequest(messages, rawTemperature)
+}
+
+// sendRequest handles the actual HTTP call to LM Studio and returns the reply text.
+func sendRequest(messages []ChatMessage, temperature float64) (string, error) {
 	requestBody := chatRequest{
 		Model:       modelName,
 		Messages:    messages,
-		Temperature: defaultTemperature,
+		Temperature: temperature,
 	}
 
 	encoded, err := json.Marshal(requestBody)
@@ -45,15 +52,13 @@ func Complete(history []ChatMessage, userMessage string) (string, error) {
 		return "", fmt.Errorf("lmstudio: encode request: %w", err)
 	}
 
-	log.Printf("lmstudio: sending request to %s — %d messages", lmStudioEndpoint, len(messages))
+	log.Printf("lmstudio: sending request — %d messages, temperature %.1f", len(messages), temperature)
 
 	resp, err := httpClient.Post(lmStudioEndpoint, "application/json", bytes.NewReader(encoded))
 	if err != nil {
 		return "", fmt.Errorf("lmstudio: post request: %w", err)
 	}
 	defer resp.Body.Close()
-
-	log.Printf("lmstudio: response status %d", resp.StatusCode)
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -75,7 +80,7 @@ func Complete(history []ChatMessage, userMessage string) (string, error) {
 }
 
 // buildMessages assembles the full message list: system prompt, history, then user message.
-func buildMessages(history []ChatMessage, userMessage string) []ChatMessage {
+func buildMessages(systemPrompt string, history []ChatMessage, userMessage string) []ChatMessage {
 	messages := make([]ChatMessage, 0, len(history)+2)
 	messages = append(messages, ChatMessage{Role: "system", Content: systemPrompt})
 	messages = append(messages, history...)

@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { useSpeechOutput } from "@/hooks/useSpeechOutput";
+import { useSessionStore } from "@/stores/session";
 import { useVoiceStore } from "@/stores/voice";
 import { useWebSocketStore } from "@/stores/websocket";
 
@@ -24,6 +25,8 @@ export function useAgentSpeech(): void {
 				typeof message.payload === "string"
 			) {
 				speak(message.payload);
+			} else if (message.type === "session_ready") {
+				useSessionStore.getState().setSessionReady(true);
 			}
 		}
 	}, [messages, speak]);
