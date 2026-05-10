@@ -41,10 +41,10 @@ func (s *sessionService) Create(ctx context.Context, req CreateSessionRequest) (
 	return &response, nil
 }
 
-func (s *sessionService) GetAll(ctx context.Context) ([]SessionResponse, error) {
-	sessions, err := s.repo.FindAll(ctx)
+func (s *sessionService) GetPaginated(ctx context.Context, filter SessionFilter, page, limit int) (*PaginatedSessionsResponse, error) {
+	sessions, total, err := s.repo.FindPaginated(ctx, filter, page, limit)
 	if err != nil {
-		return nil, fmt.Errorf("session service: get all: %w", err)
+		return nil, fmt.Errorf("session service: get paginated: %w", err)
 	}
 
 	responses := make([]SessionResponse, len(sessions))
@@ -52,7 +52,25 @@ func (s *sessionService) GetAll(ctx context.Context) ([]SessionResponse, error) 
 		responses[i] = sess.ToResponse()
 	}
 
-	return responses, nil
+	totalPages := int(total) / limit
+	if int(total)%limit != 0 {
+		totalPages++
+	}
+
+	return &PaginatedSessionsResponse{
+		Sessions:   responses,
+		Total:      total,
+		Page:       page,
+		TotalPages: totalPages,
+	}, nil
+}
+
+func (s *sessionService) GetLanguages(ctx context.Context) ([]LanguageOption, error) {
+	languages, err := s.repo.FindDistinctLanguages(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("session service: get languages: %w", err)
+	}
+	return languages, nil
 }
 
 func (s *sessionService) GetByID(ctx context.Context, id string) (*SessionWithMessagesResponse, error) {

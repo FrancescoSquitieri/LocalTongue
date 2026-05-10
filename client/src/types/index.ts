@@ -34,8 +34,28 @@ export interface QuizResponse {
 	id: string;
 	sessionIds: string[];
 	language: string;
+	languageCode: string;
 	level: string;
 	title: string;
 	questions: QuizQuestion[];
 	createdAt: string;
+}
+
+export interface LanguageOption {
+	code: string;
+	name: string;
+}
+
+export interface PaginatedSessionsResponse {
+	sessions: SessionResponse[];
+	total: number;
+	page: number;
+	totalPages: number;
+}
+
+export interface PaginatedQuizzesResponse {
+	quizzes: QuizResponse[];
+	total: number;
+	page: number;
+	totalPages: number;
 }

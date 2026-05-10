@@ -17,6 +17,7 @@ export function useDeleteAllQuizzes(): UseDeleteAllQuizzesReturn {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["quizzes"] });
+			queryClient.invalidateQueries({ queryKey: ["quiz-languages"] });
 		},
 		onError: () => {
 			toast.error("Could not delete all quizzes. Please try again.");

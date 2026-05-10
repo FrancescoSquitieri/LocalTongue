@@ -17,6 +17,7 @@ export function useDeleteAllSessions(): UseDeleteAllSessionsReturn {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["sessions"] });
+			queryClient.invalidateQueries({ queryKey: ["session-languages"] });
 		},
 		onError: () => {
 			toast.error("Could not delete all sessions. Please try again.");

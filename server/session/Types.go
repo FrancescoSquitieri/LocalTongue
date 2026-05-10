@@ -62,3 +62,22 @@ type SessionWithMessagesResponse struct {
 	Session  SessionResponse           `json:"session"`
 	Messages []message.MessageResponse `json:"messages"`
 }
+
+// SessionFilter holds optional query filters for FindPaginated.
+type SessionFilter struct {
+	LanguageCode string
+}
+
+// PaginatedSessionsResponse is returned by GET /sessions.
+type PaginatedSessionsResponse struct {
+	Sessions   []SessionResponse `json:"sessions"`
+	Total      int64             `json:"total"`
+	Page       int               `json:"page"`
+	TotalPages int               `json:"totalPages"`
+}
+
+// LanguageOption is a language name+code pair.
+type LanguageOption struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
+}

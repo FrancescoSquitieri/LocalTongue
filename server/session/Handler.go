@@ -3,6 +3,7 @@ package session
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -49,18 +50,39 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// GetAll handles GET /sessions.
+// GetAll handles GET /sessions with pagination and optional languageCode filter.
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	h.setCORSHeaders(w)
 
-	sessions, err := h.service.GetAll(r.Context())
+	languageCode := r.URL.Query().Get("languageCode")
+	page := 1
+	if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p > 0 {
+		page = p
+	}
+
+	filter := SessionFilter{LanguageCode: languageCode}
+	response, err := h.service.GetPaginated(r.Context(), filter, page, 5)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, "Could not load sessions")
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"sessions": sessions})
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetLanguages handles GET /sessions/languages.
+func (h *Handler) GetLanguages(w http.ResponseWriter, r *http.Request) {
+	h.setCORSHeaders(w)
+
+	languages, err := h.service.GetLanguages(r.Context())
+	if err != nil {
+		h.writeError(w, http.StatusInternalServerError, "Could not load languages")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"languages": languages})
 }
 
 // GetByID handles GET /sessions/{id}.

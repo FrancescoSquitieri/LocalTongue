@@ -39,12 +39,14 @@ func main() {
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
 
+	mux.HandleFunc("GET /sessions/languages", sessionHandler.GetLanguages)
 	mux.HandleFunc("POST /sessions", sessionHandler.Create)
 	mux.HandleFunc("GET /sessions", sessionHandler.GetAll)
 	mux.HandleFunc("GET /sessions/{id}", sessionHandler.GetByID)
 	mux.HandleFunc("DELETE /sessions", sessionHandler.DeleteAll)
 	mux.HandleFunc("DELETE /sessions/{id}", sessionHandler.Delete)
 
+	mux.HandleFunc("GET /quizzes/languages", quizHandler.GetLanguages)
 	mux.HandleFunc("POST /quizzes", quizHandler.Generate)
 	mux.HandleFunc("GET /quizzes", quizHandler.GetAll)
 	mux.HandleFunc("GET /quizzes/{id}", quizHandler.GetByID)

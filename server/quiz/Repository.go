@@ -35,23 +35,71 @@ func (r *mongoRepository) Create(ctx context.Context, q *Quiz) error {
 	return nil
 }
 
-func (r *mongoRepository) FindAll(ctx context.Context) ([]Quiz, error) {
+func (r *mongoRepository) FindPaginated(ctx context.Context, filter QuizFilter, page, limit int) ([]Quiz, int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, operationTimeout)
 	defer cancel()
 
-	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}})
-	cursor, err := r.collection.Find(ctx, bson.M{}, opts)
+	mongoFilter := bson.M{}
+	if filter.LanguageCode != "" {
+		mongoFilter["languageCode"] = filter.LanguageCode
+	}
+
+	total, err := r.collection.CountDocuments(ctx, mongoFilter)
 	if err != nil {
-		return nil, fmt.Errorf("quiz: find all: %w", err)
+		return nil, 0, fmt.Errorf("quiz: count: %w", err)
+	}
+
+	skip := int64((page - 1) * limit)
+	opts := options.Find().
+		SetSort(bson.D{{Key: "createdAt", Value: -1}}).
+		SetSkip(skip).
+		SetLimit(int64(limit))
+
+	cursor, err := r.collection.Find(ctx, mongoFilter, opts)
+	if err != nil {
+		return nil, 0, fmt.Errorf("quiz: find paginated: %w", err)
 	}
 	defer cursor.Close(ctx)
 
 	var quizzes []Quiz
 	if err := cursor.All(ctx, &quizzes); err != nil {
-		return nil, fmt.Errorf("quiz: decode quizzes: %w", err)
+		return nil, 0, fmt.Errorf("quiz: decode quizzes: %w", err)
 	}
 
-	return quizzes, nil
+	return quizzes, total, nil
+}
+
+func (r *mongoRepository) FindDistinctLanguages(ctx context.Context) ([]LanguageOption, error) {
+	ctx, cancel := context.WithTimeout(ctx, operationTimeout)
+	defer cancel()
+
+	pipeline := mongo.Pipeline{
+		{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: "$languageCode"},
+			{Key: "name", Value: bson.D{{Key: "$first", Value: "$language"}}},
+		}}},
+		{{Key: "$sort", Value: bson.D{{Key: "name", Value: 1}}}},
+	}
+
+	cursor, err := r.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, fmt.Errorf("quiz: distinct languages: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var raw []struct {
+		Code string `bson:"_id"`
+		Name string `bson:"name"`
+	}
+	if err := cursor.All(ctx, &raw); err != nil {
+		return nil, fmt.Errorf("quiz: decode languages: %w", err)
+	}
+
+	languages := make([]LanguageOption, len(raw))
+	for i, item := range raw {
+		languages[i] = LanguageOption{Code: item.Code, Name: item.Name}
+	}
+	return languages, nil
 }
 
 func (r *mongoRepository) FindByID(ctx context.Context, id primitive.ObjectID) (*Quiz, error) {

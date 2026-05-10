@@ -2,23 +2,33 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { baseClient } from "@/api/baseClient";
-import type { QuizResponse } from "@/types";
+import type { PaginatedQuizzesResponse } from "@/types";
 
-interface GetQuizzesResponse {
-	quizzes: QuizResponse[];
+interface UseGetQuizzesParams {
+	page: number;
+	languageCode: string;
 }
 
 interface UseGetQuizzesReturn {
-	quizzes: QuizResponse[];
+	quizzes: PaginatedQuizzesResponse["quizzes"];
+	total: number;
+	totalPages: number;
 	isLoading: boolean;
 }
 
-export function useGetQuizzes(): UseGetQuizzesReturn {
+export function useGetQuizzes({
+	page,
+	languageCode,
+}: UseGetQuizzesParams): UseGetQuizzesReturn {
 	const { data, isLoading } = useQuery({
-		queryKey: ["quizzes"],
-		queryFn: async (): Promise<QuizResponse[]> => {
-			const response = await baseClient.get<GetQuizzesResponse>("/quizzes");
-			return response.data.quizzes;
+		queryKey: ["quizzes", { page, languageCode }],
+		queryFn: async (): Promise<PaginatedQuizzesResponse> => {
+			const params = new URLSearchParams({ page: String(page), limit: "5" });
+			if (languageCode) params.set("languageCode", languageCode);
+			const response = await baseClient.get<PaginatedQuizzesResponse>(
+				`/quizzes?${params}`,
+			);
+			return response.data;
 		},
 		throwOnError: false,
 		meta: {
@@ -28,5 +38,10 @@ export function useGetQuizzes(): UseGetQuizzesReturn {
 		},
 	});
 
-	return { quizzes: data ?? [], isLoading };
+	return {
+		quizzes: data?.quizzes ?? [],
+		total: data?.total ?? 0,
+		totalPages: data?.totalPages ?? 0,
+		isLoading,
+	};
 }

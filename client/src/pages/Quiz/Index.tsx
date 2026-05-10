@@ -1,15 +1,22 @@
 import { GraduationCap } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useDeleteAllQuizzes } from "@/api/quiz/use-delete-all-quizzes";
 import { useDeleteQuiz } from "@/api/quiz/use-delete-quiz";
+import { useGetQuizLanguages } from "@/api/quiz/use-get-quiz-languages";
 import { useGetQuizzes } from "@/api/quiz/use-get-quizzes";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog/Index";
+import Pagination from "@/components/Pagination/Index";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { formatDateTime } from "@/lib/helpers";
 import type { QuizResponse } from "@/types";
-
-const ALL_LANGUAGES = "All";
 
 interface QuizCardProps {
 	quiz: QuizResponse;
@@ -58,37 +65,6 @@ function QuizCard({ quiz }: QuizCardProps) {
 	);
 }
 
-interface LanguageFilterProps {
-	languages: string[];
-	selected: string;
-	onSelect: (language: string) => void;
-}
-
-function LanguageFilter({
-	languages,
-	selected,
-	onSelect,
-}: LanguageFilterProps) {
-	return (
-		<div className="flex flex-wrap gap-2">
-			{[ALL_LANGUAGES, ...languages].map((language) => (
-				<button
-					key={language}
-					type="button"
-					onClick={() => onSelect(language)}
-					className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-						selected === language
-							? "border-primary bg-primary text-primary-foreground"
-							: "border-border bg-transparent text-muted-foreground hover:bg-muted"
-					}`}
-				>
-					{language}
-				</button>
-			))}
-		</div>
-	);
-}
-
 function QuizzesSkeleton() {
 	return (
 		<div className="space-y-3">
@@ -103,32 +79,39 @@ function QuizzesSkeleton() {
 }
 
 export default function Quiz() {
-	const { quizzes, isLoading } = useGetQuizzes();
+	const [page, setPage] = useState(1);
+	const [selectedLanguageCode, setSelectedLanguageCode] = useState("");
+
+	const { quizzes, total, totalPages, isLoading } = useGetQuizzes({
+		page,
+		languageCode: selectedLanguageCode,
+	});
+	const { languages, isLoading: isLoadingLanguages } = useGetQuizLanguages();
 	const { deleteAllQuizzes, isPending: isDeletingAll } = useDeleteAllQuizzes();
-	const [selectedLanguage, setSelectedLanguage] = useState(ALL_LANGUAGES);
 
-	const availableLanguages = useMemo(
-		() => [...new Set(quizzes.map((quiz) => quiz.language))].sort(),
-		[quizzes],
-	);
+	const hasInitializedLanguage = useRef(false);
 
-	const filteredQuizzes = useMemo(
-		() =>
-			selectedLanguage === ALL_LANGUAGES
-				? quizzes
-				: quizzes.filter((quiz) => quiz.language === selectedLanguage),
-		[quizzes, selectedLanguage],
-	);
+	useEffect(() => {
+		if (!hasInitializedLanguage.current && languages.length > 0) {
+			hasInitializedLanguage.current = true;
+			setSelectedLanguageCode(languages[0].code);
+		}
+	}, [languages]);
 
-	function handleLanguageSelect(language: string): void {
-		setSelectedLanguage(language);
+	function handleLanguageChange(code: string): void {
+		setSelectedLanguageCode(code === "all" ? "" : code);
+		setPage(1);
+	}
+
+	function handlePageChange(newPage: number): void {
+		setPage(newPage);
 	}
 
 	return (
 		<main className="mx-auto min-h-screen max-w-2xl px-6 py-8">
 			<div className="mb-6 flex items-center justify-between gap-4">
 				<h1 className="text-xl font-bold tracking-tight">Quizzes</h1>
-				{quizzes.length > 0 && (
+				{total > 0 && (
 					<ConfirmDeleteDialog
 						onConfirm={deleteAllQuizzes}
 						isPending={isDeletingAll}
@@ -139,37 +122,55 @@ export default function Quiz() {
 				)}
 			</div>
 
-			{!isLoading && availableLanguages.length > 1 && (
-				<div className="mb-5">
-					<LanguageFilter
-						languages={availableLanguages}
-						selected={selectedLanguage}
-						onSelect={handleLanguageSelect}
-					/>
-				</div>
-			)}
+			<div className="mb-5">
+				<Select
+					value={selectedLanguageCode || "all"}
+					onValueChange={handleLanguageChange}
+					disabled={isLoadingLanguages}
+				>
+					<SelectTrigger className="w-[180px]">
+						<SelectValue placeholder="All languages" />
+					</SelectTrigger>
+					<SelectContent position="popper" side="bottom" sideOffset={4}>
+						<SelectItem value="all">All languages</SelectItem>
+						{languages.map((lang) => (
+							<SelectItem key={lang.code} value={lang.code}>
+								{lang.name}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</div>
 
 			{isLoading && <QuizzesSkeleton />}
 
-			{!isLoading && quizzes.length === 0 && (
+			{!isLoading && quizzes.length === 0 && selectedLanguageCode === "" && (
 				<p className="py-12 text-center text-sm text-muted-foreground">
 					No quizzes yet. Generate one from a session.
 				</p>
 			)}
 
-			{!isLoading && filteredQuizzes.length === 0 && quizzes.length > 0 && (
+			{!isLoading && quizzes.length === 0 && selectedLanguageCode !== "" && (
 				<p className="py-12 text-center text-sm text-muted-foreground">
 					No quizzes for this language.
 				</p>
 			)}
 
-			{!isLoading && filteredQuizzes.length > 0 && (
+			{!isLoading && quizzes.length > 0 && (
 				<div className="space-y-3">
-					{filteredQuizzes.map((quiz) => (
+					{quizzes.map((quiz) => (
 						<QuizCard key={quiz.id} quiz={quiz} />
 					))}
 				</div>
 			)}
+
+			<div className="mt-6">
+				<Pagination
+					page={page}
+					totalPages={totalPages}
+					onPageChange={handlePageChange}
+				/>
+			</div>
 		</main>
 	);
 }

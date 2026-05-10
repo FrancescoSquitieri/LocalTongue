@@ -74,12 +74,13 @@ func (s *quizService) Generate(ctx context.Context, req GenerateQuizRequest, mes
 
 	now := time.Now()
 	generatedQuiz := &Quiz{
-		SessionIDs: sessionObjectIDs,
-		Language:   req.Language,
-		Level:      req.Level,
-		Title:      fmt.Sprintf("%s %s Quiz — %s", req.Language, req.Level, now.Format("2 Jan 2006")),
-		Questions:  llmResponse.Questions,
-		CreatedAt:  now,
+		SessionIDs:   sessionObjectIDs,
+		Language:     req.Language,
+		LanguageCode: req.LanguageCode,
+		Level:        req.Level,
+		Title:        fmt.Sprintf("%s %s Quiz — %s", req.Language, req.Level, now.Format("2 Jan 2006")),
+		Questions:    llmResponse.Questions,
+		CreatedAt:    now,
 	}
 
 	if err := s.repo.Create(ctx, generatedQuiz); err != nil {
@@ -90,10 +91,10 @@ func (s *quizService) Generate(ctx context.Context, req GenerateQuizRequest, mes
 	return &response, nil
 }
 
-func (s *quizService) GetAll(ctx context.Context) ([]QuizResponse, error) {
-	quizzes, err := s.repo.FindAll(ctx)
+func (s *quizService) GetPaginated(ctx context.Context, filter QuizFilter, page, limit int) (*PaginatedQuizzesResponse, error) {
+	quizzes, total, err := s.repo.FindPaginated(ctx, filter, page, limit)
 	if err != nil {
-		return nil, fmt.Errorf("quiz service: get all: %w", err)
+		return nil, fmt.Errorf("quiz service: get paginated: %w", err)
 	}
 
 	responses := make([]QuizResponse, len(quizzes))
@@ -101,7 +102,25 @@ func (s *quizService) GetAll(ctx context.Context) ([]QuizResponse, error) {
 		responses[i] = q.ToResponse()
 	}
 
-	return responses, nil
+	totalPages := int(total) / limit
+	if int(total)%limit != 0 {
+		totalPages++
+	}
+
+	return &PaginatedQuizzesResponse{
+		Quizzes:    responses,
+		Total:      total,
+		Page:       page,
+		TotalPages: totalPages,
+	}, nil
+}
+
+func (s *quizService) GetLanguages(ctx context.Context) ([]LanguageOption, error) {
+	languages, err := s.repo.FindDistinctLanguages(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("quiz service: get languages: %w", err)
+	}
+	return languages, nil
 }
 
 func (s *quizService) GetByID(ctx context.Context, id string) (*QuizResponse, error) {

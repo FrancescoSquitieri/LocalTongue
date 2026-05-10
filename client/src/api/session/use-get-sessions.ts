@@ -2,23 +2,33 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { baseClient } from "@/api/baseClient";
-import type { SessionResponse } from "@/types";
+import type { PaginatedSessionsResponse } from "@/types";
 
-interface GetSessionsResponse {
-	sessions: SessionResponse[];
+interface UseGetSessionsParams {
+	page: number;
+	languageCode: string;
 }
 
 interface UseGetSessionsReturn {
-	sessions: SessionResponse[];
+	sessions: PaginatedSessionsResponse["sessions"];
+	total: number;
+	totalPages: number;
 	isLoading: boolean;
 }
 
-export function useGetSessions(): UseGetSessionsReturn {
+export function useGetSessions({
+	page,
+	languageCode,
+}: UseGetSessionsParams): UseGetSessionsReturn {
 	const { data, isLoading } = useQuery({
-		queryKey: ["sessions"],
-		queryFn: async (): Promise<SessionResponse[]> => {
-			const response = await baseClient.get<GetSessionsResponse>("/sessions");
-			return response.data.sessions;
+		queryKey: ["sessions", { page, languageCode }],
+		queryFn: async (): Promise<PaginatedSessionsResponse> => {
+			const params = new URLSearchParams({ page: String(page), limit: "5" });
+			if (languageCode) params.set("languageCode", languageCode);
+			const response = await baseClient.get<PaginatedSessionsResponse>(
+				`/sessions?${params}`,
+			);
+			return response.data;
 		},
 		throwOnError: false,
 		meta: {
@@ -28,5 +38,10 @@ export function useGetSessions(): UseGetSessionsReturn {
 		},
 	});
 
-	return { sessions: data ?? [], isLoading };
+	return {
+		sessions: data?.sessions ?? [],
+		total: data?.total ?? 0,
+		totalPages: data?.totalPages ?? 0,
+		isLoading,
+	};
 }
