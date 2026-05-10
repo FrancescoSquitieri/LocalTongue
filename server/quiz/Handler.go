@@ -92,6 +92,18 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// DeleteAll handles DELETE /quizzes.
+func (h *Handler) DeleteAll(w http.ResponseWriter, r *http.Request) {
+	h.setCORSHeaders(w)
+
+	if err := h.service.DeleteAll(r.Context()); err != nil {
+		h.writeError(w, http.StatusInternalServerError, "Could not delete quizzes")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	h.setCORSHeaders(w)
 

@@ -15,6 +15,7 @@ type Repository interface {
 	FindAll(ctx context.Context) ([]Quiz, error)
 	FindByID(ctx context.Context, id primitive.ObjectID) (*Quiz, error)
 	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteAll(ctx context.Context) error
 }
 
 // Service defines the business-logic contract for quizzes.
@@ -23,4 +24,5 @@ type Service interface {
 	GetAll(ctx context.Context) ([]QuizResponse, error)
 	GetByID(ctx context.Context, id string) (*QuizResponse, error)
 	Delete(ctx context.Context, id string) error
+	DeleteAll(ctx context.Context) error
 }

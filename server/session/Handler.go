@@ -106,3 +106,15 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// DeleteAll handles DELETE /sessions.
+func (h *Handler) DeleteAll(w http.ResponseWriter, r *http.Request) {
+	h.setCORSHeaders(w)
+
+	if err := h.service.DeleteAll(r.Context()); err != nil {
+		h.writeError(w, http.StatusInternalServerError, "Could not delete sessions")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

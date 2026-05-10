@@ -18,12 +18,7 @@ export default function AgentTranscript({ className }: AgentTranscriptProps) {
 			: null;
 
 	return (
-		<div
-			className={cn(
-				"max-h-[200px] overflow-y-auto rounded-lg bg-muted/40 p-4",
-				className,
-			)}
-		>
+		<div className={cn("rounded-lg bg-muted/40 p-4", className)}>
 			{displayText !== null ? (
 				<p className="text-sm leading-relaxed text-foreground">{displayText}</p>
 			) : (

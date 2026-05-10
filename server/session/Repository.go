@@ -81,6 +81,17 @@ func (r *mongoRepository) Delete(ctx context.Context, id primitive.ObjectID) err
 	return nil
 }
 
+func (r *mongoRepository) DeleteAll(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, operationTimeout)
+	defer cancel()
+
+	if _, err := r.collection.DeleteMany(ctx, bson.M{}); err != nil {
+		return fmt.Errorf("session: delete all: %w", err)
+	}
+
+	return nil
+}
+
 func (r *mongoRepository) IncrementMessageCount(ctx context.Context, id primitive.ObjectID) error {
 	ctx, cancel := context.WithTimeout(ctx, operationTimeout)
 	defer cancel()

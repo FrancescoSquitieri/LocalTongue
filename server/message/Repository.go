@@ -67,3 +67,14 @@ func (r *mongoRepository) DeleteBySessionID(ctx context.Context, sessionID primi
 
 	return nil
 }
+
+func (r *mongoRepository) DeleteAll(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, operationTimeout)
+	defer cancel()
+
+	if _, err := r.collection.DeleteMany(ctx, bson.M{}); err != nil {
+		return fmt.Errorf("message: delete all: %w", err)
+	}
+
+	return nil
+}

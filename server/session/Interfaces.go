@@ -12,6 +12,7 @@ type Repository interface {
 	FindAll(ctx context.Context) ([]Session, error)
 	FindByID(ctx context.Context, id primitive.ObjectID) (*Session, error)
 	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteAll(ctx context.Context) error
 	IncrementMessageCount(ctx context.Context, id primitive.ObjectID) error
 }
 
@@ -21,4 +22,5 @@ type Service interface {
 	GetAll(ctx context.Context) ([]SessionResponse, error)
 	GetByID(ctx context.Context, id string) (*SessionWithMessagesResponse, error)
 	Delete(ctx context.Context, id string) error
+	DeleteAll(ctx context.Context) error
 }

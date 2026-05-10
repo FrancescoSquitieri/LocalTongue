@@ -42,11 +42,13 @@ func main() {
 	mux.HandleFunc("POST /sessions", sessionHandler.Create)
 	mux.HandleFunc("GET /sessions", sessionHandler.GetAll)
 	mux.HandleFunc("GET /sessions/{id}", sessionHandler.GetByID)
+	mux.HandleFunc("DELETE /sessions", sessionHandler.DeleteAll)
 	mux.HandleFunc("DELETE /sessions/{id}", sessionHandler.Delete)
 
 	mux.HandleFunc("POST /quizzes", quizHandler.Generate)
 	mux.HandleFunc("GET /quizzes", quizHandler.GetAll)
 	mux.HandleFunc("GET /quizzes/{id}", quizHandler.GetByID)
+	mux.HandleFunc("DELETE /quizzes", quizHandler.DeleteAll)
 	mux.HandleFunc("DELETE /quizzes/{id}", quizHandler.Delete)
 
 	go func() {

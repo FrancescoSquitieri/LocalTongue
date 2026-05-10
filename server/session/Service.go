@@ -98,3 +98,15 @@ func (s *sessionService) Delete(ctx context.Context, id string) error {
 
 	return nil
 }
+
+func (s *sessionService) DeleteAll(ctx context.Context) error {
+	if err := s.messageRepo.DeleteAll(ctx); err != nil {
+		return fmt.Errorf("session service: delete all messages: %w", err)
+	}
+
+	if err := s.repo.DeleteAll(ctx); err != nil {
+		return fmt.Errorf("session service: delete all sessions: %w", err)
+	}
+
+	return nil
+}

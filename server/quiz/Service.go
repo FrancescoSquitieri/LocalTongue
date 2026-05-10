@@ -131,3 +131,11 @@ func (s *quizService) Delete(ctx context.Context, id string) error {
 
 	return nil
 }
+
+func (s *quizService) DeleteAll(ctx context.Context) error {
+	if err := s.repo.DeleteAll(ctx); err != nil {
+		return fmt.Errorf("quiz service: delete all: %w", err)
+	}
+
+	return nil
+}
