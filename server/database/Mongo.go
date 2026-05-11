@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -12,9 +13,9 @@ import (
 )
 
 const (
-	mongoURI       = "mongodb://localhost:27017"
-	databaseName   = "lingualocal"
-	connectTimeout = 10 * time.Second
+	defaultMongoURI = "mongodb://localhost:27017"
+	databaseName    = "localtongue"
+	connectTimeout  = 10 * time.Second
 )
 
 var (
@@ -31,7 +32,12 @@ func Connect() error {
 		ctx, cancel := context.WithTimeout(context.Background(), connectTimeout)
 		defer cancel()
 
-		clientOptions := options.Client().ApplyURI(mongoURI)
+		uri := os.Getenv("MONGO_URI")
+		if uri == "" {
+			uri = defaultMongoURI
+		}
+
+		clientOptions := options.Client().ApplyURI(uri)
 		mongoClient, err := mongo.Connect(ctx, clientOptions)
 		if err != nil {
 			connectErr = fmt.Errorf("database: connect: %w", err)
@@ -51,7 +57,7 @@ func Connect() error {
 	return connectErr
 }
 
-// GetCollection returns a handle to the named collection in the lingualocal database.
+// GetCollection returns a handle to the named collection in the localtongue database.
 func GetCollection(name string) *mongo.Collection {
 	return db.Collection(name)
 }

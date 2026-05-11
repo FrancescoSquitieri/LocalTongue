@@ -7,17 +7,25 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
 
 const (
-	lmStudioEndpoint   = "http://127.0.0.1:1234/v1/chat/completions"
 	modelName          = "local-model"
 	defaultTemperature = 0.7
 	rawTemperature     = 0.3
 	requestTimeout     = 60 * time.Second
 )
+
+var lmStudioEndpoint = func() string {
+	base := os.Getenv("LMSTUDIO_URL")
+	if base == "" {
+		base = "http://127.0.0.1:1234"
+	}
+	return base + "/v1/chat/completions"
+}()
 
 var httpClient = &http.Client{Timeout: requestTimeout}
 

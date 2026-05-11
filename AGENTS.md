@@ -1,7 +1,7 @@
-# LinguaLocal — Zed Agent Rules
+# LocalTongue — Zed Agent Rules
 
 ## Project Overview
-LinguaLocal is an open-source local language learning tool.
+LocalTongue is an open-source local language learning tool.
 The user speaks to an LLM (via LM Studio) and practices conversation in foreign languages.
 Stack: React + Vite (frontend, /client) — Go (backend, /server).
 No monorepo. Started independently, orchestrated via Makefile.

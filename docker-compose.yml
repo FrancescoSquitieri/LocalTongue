@@ -1,7 +1,8 @@
 services:
   mongo:
     image: mongo:7
-    container_name: lingualocal_mongo
+    container_name: localtongue_mongo
+    command: mongod --wiredTigerCacheSizeGB 0.25 --quiet
     ports:
       - "27017:27017"
     volumes:
@@ -14,6 +15,35 @@ services:
       retries: 5
       start_period: 10s
 
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: localtongue_server
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - LMSTUDIO_URL=http://host.docker.internal:1234
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: localtongue_client
+    ports:
+      - "5173:5173"
+    depends_on:
+      - server
+    restart: unless-stopped
+
 volumes:
   mongo_data:
-    name: lingualocal_mongo_data
+    name: localtongue_mongo_data
