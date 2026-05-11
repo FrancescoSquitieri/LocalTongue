@@ -7,6 +7,7 @@ import type { QuizResponse } from "@/types";
 interface CreateQuizBody {
 	sessionIds: string[];
 	language: string;
+	languageCode: string;
 	level: string;
 }
 

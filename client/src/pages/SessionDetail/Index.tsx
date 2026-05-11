@@ -55,6 +55,7 @@ export default function SessionDetail() {
 		createQuiz({
 			sessionIds: [data.session.id],
 			language: data.session.language,
+			languageCode: data.session.languageCode,
 			level: data.session.level,
 		});
 	}

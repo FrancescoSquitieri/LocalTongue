@@ -29,5 +29,8 @@ export function useGetQuizLanguages(): UseGetQuizLanguagesReturn {
 		},
 	});
 
-	return { languages: data ?? [], isLoading };
+	return {
+		languages: (data ?? []).filter((lang) => lang.code !== ""),
+		isLoading,
+	};
 }

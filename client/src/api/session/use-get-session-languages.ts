@@ -30,5 +30,8 @@ export function useGetSessionLanguages(): UseGetSessionLanguagesReturn {
 		},
 	});
 
-	return { languages: data ?? [], isLoading };
+	return {
+		languages: (data ?? []).filter((lang) => lang.code !== ""),
+		isLoading,
+	};
 }
